@@ -40,3 +40,12 @@ export const idlFactory = ({ IDL }) => {
     'get_block_headers' : IDL.Func([IDL.Nat32, IDL.Opt(IDL.Nat32)], [get_block_headers_response], []),
   });
 };
+
+export const init = ({ IDL }) => {
+  const network = IDL.Variant({
+    'regtest' : IDL.Null,
+    'testnet' : IDL.Null,
+    'mainnet' : IDL.Null,
+  });
+  return [network];
+};
