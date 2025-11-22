@@ -1,17 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
 import { backend } from './declarations/backend';
+import VaultDeposit from './components/VaultDeposit';
+import VaultBalance from './components/VaultBalance';
+import VaultWithdraw from './components/VaultWithdraw';
 import BalanceChecker from './components/BalanceChecker';
 import UtxoViewer from './components/UtxoViewer';
 import FeePercentiles from './components/FeePercentiles';
-import EcdsaSigning from './components/EcdsaSigning';
-import SchnorrSigning from './components/SchnorrSigning';
-import BlockHeaders from './components/BlockHeaders';
 import nexLogo from '/logo.png';
 import '../index.css';
 
 function App() {
-  const [activeTab, setActiveTab] = useState('ecdsa');
+  const [activeTab, setActiveTab] = useState('deposit');
   const [backendReady, setBackendReady] = useState(false);
 
   useEffect(() => {
@@ -21,12 +21,11 @@ function App() {
   }, []);
 
   const tabs = [
-    { id: 'ecdsa', label: 'ECDSA', icon: '🔐' },
-    { id: 'schnorr', label: 'Schnorr', icon: '✍️' },
-    { id: 'headers', label: 'Block Headers', icon: '📦' },
-    { id: 'balance', label: 'Balance', icon: '💰' },
-    { id: 'utxos', label: 'UTXOs', icon: '🔍' },
-    { id: 'fees', label: 'Fees', icon: '⚡' },
+    { id: 'deposit', label: 'Deposit', icon: '💳' },
+    { id: 'vault', label: 'My Vault', icon: '🏦' },
+    { id: 'withdraw', label: 'Withdraw', icon: '📤' },
+    { id: 'explorer', label: 'Explorer', icon: '🔍' },
+    { id: 'fees', label: 'Network Fees', icon: '⚡' },
   ];
 
   return (
@@ -37,8 +36,8 @@ function App() {
             <div className="flex items-center space-x-3">
               <img src={nexLogo} alt="NexBTC Logo" className="h-12 w-12" />
               <div>
-                <h1 className="text-2xl font-bold text-gray-800">NexBTC</h1>
-                <p className="text-sm text-gray-500">Bitcoin Signing & Query Service</p>
+                <h1 className="text-2xl font-bold text-gray-800">NexBTC Vault</h1>
+                <p className="text-sm text-gray-500">Secure Bitcoin Deposit & Withdrawal</p>
               </div>
             </div>
             <div className="flex items-center space-x-2">
@@ -78,97 +77,111 @@ function App() {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {activeTab === 'ecdsa' && (
+              {activeTab === 'deposit' && (
                 <>
-                  <EcdsaSigning backend={backend} />
+                  <VaultDeposit backend={backend} />
                   <div className="bg-white rounded-lg shadow-md p-6">
-                    <h3 className="text-xl font-semibold mb-4 text-gray-800">About ECDSA Signing</h3>
+                    <h3 className="text-xl font-semibold mb-4 text-gray-800">How the Vault Works</h3>
                     <div className="space-y-3 text-sm text-gray-600">
                       <p>
-                        Threshold ECDSA signing service using the secp256k1 curve. This is the same
-                        signature algorithm used in Bitcoin and Ethereum.
+                        The NexBTC Vault uses the Internet Computer's threshold ECDSA signatures to
+                        securely hold your Bitcoin. Each user gets a unique deposit address tied to
+                        their Internet Computer identity.
                       </p>
                       <div className="bg-purple-50 border border-purple-200 rounded p-3">
-                        <p className="font-semibold text-purple-900 mb-2">Use Cases:</p>
+                        <p className="font-semibold text-purple-900 mb-2">Security Features:</p>
                         <ul className="list-disc list-inside text-purple-800 space-y-1">
-                          <li>Bitcoin transaction signing</li>
-                          <li>Ethereum transaction signing</li>
-                          <li>General cryptographic signatures</li>
+                          <li>Your identity controls your funds</li>
+                          <li>Threshold signatures (no single point of failure)</li>
+                          <li>Non-custodial (only you can withdraw)</li>
+                          <li>Verifiable on-chain</li>
                         </ul>
                       </div>
+                      <div className="bg-green-50 border border-green-200 rounded p-3">
+                        <p className="font-semibold text-green-900 mb-2">Getting Started:</p>
+                        <ol className="list-decimal list-inside text-green-800 space-y-1">
+                          <li>Click "Get My Deposit Address"</li>
+                          <li>Send Bitcoin from any wallet</li>
+                          <li>Wait for confirmations</li>
+                          <li>View balance in "My Vault" tab</li>
+                          <li>Withdraw anytime to any address</li>
+                        </ol>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
+              {activeTab === 'vault' && (
+                <>
+                  <div className="lg:col-span-2"><VaultBalance backend={backend} /></div>
+                </>
+              )}
+              {activeTab === 'withdraw' && (
+                <>
+                  <VaultWithdraw backend={backend} />
+                  <div className="bg-white rounded-lg shadow-md p-6">
+                    <h3 className="text-xl font-semibold mb-4 text-gray-800">Withdrawal Security</h3>
+                    <div className="space-y-3 text-sm text-gray-600">
+                      <p>
+                        Withdrawals are authenticated using your Internet Computer identity. Only you
+                        can withdraw the Bitcoin you deposited.
+                      </p>
                       <div className="bg-blue-50 border border-blue-200 rounded p-3">
-                        <p className="font-semibold text-blue-900 mb-1">Note:</p>
-                        <p className="text-blue-800 text-xs">
-                          The message hash must be exactly 32 bytes. For Bitcoin, this is typically
-                          the double SHA-256 hash of the transaction data.
+                        <p className="font-semibold text-blue-900 mb-2">How It Works:</p>
+                        <ul className="list-disc list-inside text-blue-800 space-y-1">
+                          <li>Your identity is verified by the canister</li>
+                          <li>Transaction is signed with threshold ECDSA</li>
+                          <li>Funds are sent directly to your specified address</li>
+                          <li>Transaction is broadcast to Bitcoin network</li>
+                        </ul>
+                      </div>
+                      <div className="bg-yellow-50 border border-yellow-200 rounded p-3">
+                        <p className="font-semibold text-yellow-900 mb-1">Fees:</p>
+                        <p className="text-yellow-800 text-xs">
+                          Network fees are automatically calculated and deducted. Check the "Network Fees"
+                          tab to see current rates.
                         </p>
                       </div>
                     </div>
                   </div>
                 </>
               )}
-              {activeTab === 'schnorr' && (
-                <>
-                  <SchnorrSigning backend={backend} />
-                  <div className="bg-white rounded-lg shadow-md p-6">
-                    <h3 className="text-xl font-semibold mb-4 text-gray-800">About Schnorr Signing</h3>
-                    <div className="space-y-3 text-sm text-gray-600">
-                      <p>
-                        Threshold Schnorr signing service using BIP340/BIP341. This is used for
-                        Taproot transactions in Bitcoin.
-                      </p>
-                      <div className="bg-purple-50 border border-purple-200 rounded p-3">
-                        <p className="font-semibold text-purple-900 mb-2">Features:</p>
-                        <ul className="list-disc list-inside text-purple-800 space-y-1">
-                          <li>BIP340 (standard Schnorr)</li>
-                          <li>BIP341 (Taproot with Merkle root)</li>
-                          <li>Smaller signatures than ECDSA</li>
-                        </ul>
-                      </div>
-                      <div className="bg-blue-50 border border-blue-200 rounded p-3">
-                        <p className="font-semibold text-blue-900 mb-1">Taproot Mode:</p>
-                        <p className="text-blue-800 text-xs">
-                          Enable BIP-341 mode for Taproot script-path spending. Requires a 32-byte
-                          Merkle root hash of the script tree.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </>
-              )}
-              {activeTab === 'headers' && (
-                <>
-                  <div className="lg:col-span-2"><BlockHeaders backend={backend} /></div>
-                </>
-              )}
-              {activeTab === 'balance' && (
+              {activeTab === 'explorer' && (
                 <>
                   <BalanceChecker backend={backend} />
-                  <div className="bg-white rounded-lg shadow-md p-6">
-                    <h3 className="text-xl font-semibold mb-4 text-gray-800">About Balance Checking</h3>
-                    <div className="space-y-3 text-sm text-gray-600">
-                      <p>
-                        Query the balance of any Bitcoin address on the network. This uses the
-                        Internet Computer's native Bitcoin integration.
-                      </p>
-                      <div className="bg-blue-50 border border-blue-200 rounded p-3">
-                        <p className="font-semibold text-blue-900 mb-1">Supported Networks:</p>
-                        <p className="text-blue-800 text-xs">
-                          Mainnet, Testnet, and Regtest (local development)
-                        </p>
-                      </div>
-                    </div>
-                  </div>
+                  <UtxoViewer backend={backend} />
                 </>
               )}
-              {activeTab === 'utxos' && <div className="lg:col-span-2"><UtxoViewer backend={backend} /></div>}
               {activeTab === 'fees' && (
                 <>
                   <FeePercentiles backend={backend} />
                   <div className="bg-white rounded-lg shadow-md p-6">
-                    <h3 className="text-xl font-semibold mb-4 text-gray-800">Understanding Fees</h3>
+                    <h3 className="text-xl font-semibold mb-4 text-gray-800">Understanding Network Fees</h3>
                     <div className="space-y-3 text-sm text-gray-600">
-                      <p>Bitcoin fees are measured in sat/vByte. Higher fees mean faster confirmation.</p>
+                      <p>
+                        Bitcoin transaction fees are measured in satoshis per virtual byte (sat/vByte).
+                        Higher fees result in faster confirmation times.
+                      </p>
+                      <div className="space-y-2">
+                        <div className="flex items-start space-x-2">
+                          <span className="text-blue-600">•</span>
+                          <p><strong>Low (10-25th percentile):</strong> Slower confirmation, lower cost</p>
+                        </div>
+                        <div className="flex items-start space-x-2">
+                          <span className="text-yellow-600">•</span>
+                          <p><strong>Medium (50th percentile):</strong> Balanced speed and cost</p>
+                        </div>
+                        <div className="flex items-start space-x-2">
+                          <span className="text-orange-600">•</span>
+                          <p><strong>High (75th+ percentile):</strong> Fast confirmation, higher cost</p>
+                        </div>
+                      </div>
+                      <div className="bg-blue-50 border border-blue-200 rounded p-3 mt-3">
+                        <p className="text-blue-900 text-xs">
+                          Vault withdrawals automatically use the 50th percentile (medium priority) for
+                          reliable confirmation times at reasonable cost.
+                        </p>
+                      </div>
                     </div>
                   </div>
                 </>
@@ -181,9 +194,9 @@ function App() {
       <footer className="bg-white border-t border-gray-200 mt-12">
         <div className="container mx-auto px-4 py-6">
           <div className="text-center text-sm text-gray-600">
-            <p>Bitcoin Signing & Query Service on the Internet Computer</p>
+            <p>Secure Bitcoin Vault on the Internet Computer</p>
             <p className="mt-1 text-xs text-gray-500">
-              Threshold ECDSA • Schnorr BIP340/BIP341 • Native Bitcoin Integration
+              Threshold ECDSA • Non-Custodial • Identity-Based Withdrawals
             </p>
           </div>
         </div>
