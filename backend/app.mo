@@ -52,21 +52,18 @@ persistent actor class BasicBitcoin(network : Types.Network) {
   transient var ecdsa_canister_actor : EcdsaCanisterActor = actor ("aaaaa-aa");
   transient var schnorr_canister_actor : SchnorrCanisterActor = actor ("aaaaa-aa");
 
-  // Vault: Map user principals to their deposit addresses and balances
-  stable var userAddressesEntries : [(Principal, BitcoinAddress)] = [];
-  var userAddresses = HashMap.HashMap<Principal, BitcoinAddress>(0, Principal.equal, Principal.hash);
+  // Vault: Map user principals to their deposit addresses
+  var userAddressesEntries : [(Principal, BitcoinAddress)] = [];
+  let userAddresses = HashMap.HashMap<Principal, BitcoinAddress>(0, Principal.equal, Principal.hash);
 
   system func preupgrade() {
     userAddressesEntries := Iter.toArray(userAddresses.entries());
   };
 
   system func postupgrade() {
-    userAddresses := HashMap.fromIter<Principal, BitcoinAddress>(
-      userAddressesEntries.vals(),
-      userAddressesEntries.size(),
-      Principal.equal,
-      Principal.hash
-    );
+    for ((principal, address) in userAddressesEntries.vals()) {
+      userAddresses.put(principal, address);
+    };
     userAddressesEntries := [];
   };
 
