@@ -4,8 +4,6 @@ type millisatoshi_per_vbyte = nat64;
 
 type bitcoin_address = text;
 
-type transaction_id = text;
-
 type block_hash = blob;
 
 type network = variant {
@@ -32,36 +30,29 @@ type get_utxos_response = record {
   next_page: opt blob;
 };
 
+type schnorr_aux = variant {
+  bip341: record {
+    merkle_root_hash: blob;
+  };
+};
+
+type get_block_headers_response = record {
+  tip_height: nat32;
+  block_headers: vec blob;
+};
+
 service : (network) -> {
+    // Bitcoin blockchain query endpoints
     "get_balance": (address: bitcoin_address) -> (satoshi);
-
     "get_utxos": (bitcoin_address) -> (get_utxos_response);
-
     "get_current_fee_percentiles": () -> (vec millisatoshi_per_vbyte);
+    "get_block_headers": (start_height: nat32, end_height: opt nat32) -> (get_block_headers_response);
 
-    "get_p2pkh_address": () -> (bitcoin_address);
+    // ECDSA signing service endpoints
+    "sign_with_ecdsa": (message_hash: blob, derivation_path: vec blob) -> (blob);
+    "get_ecdsa_public_key": (derivation_path: vec blob) -> (blob);
 
-    "send_from_p2pkh_address": (record {
-      destination_address: bitcoin_address;
-      amount_in_satoshi: satoshi;
-    }) -> (transaction_id);
-
-    "get_p2tr_key_only_address": () -> (bitcoin_address);
-
-    "send_from_p2tr_key_only_address": (record {
-      destination_address: bitcoin_address;
-      amount_in_satoshi: satoshi;
-    }) -> (transaction_id);
-
-    "get_p2tr_address": () -> (bitcoin_address);
-
-    "send_from_p2tr_address_key_path": (record {
-      destination_address: bitcoin_address;
-      amount_in_satoshi: satoshi;
-    }) -> (transaction_id);
-
-    "send_from_p2tr_address_script_path": (record {
-      destination_address: bitcoin_address;
-      amount_in_satoshi: satoshi;
-    }) -> (transaction_id);
+    // Schnorr signing service endpoints
+    "sign_with_schnorr": (message: blob, derivation_path: vec blob, aux: opt schnorr_aux) -> (blob);
+    "get_schnorr_public_key": (derivation_path: vec blob) -> (blob);
 }

@@ -1,16 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
 import { backend } from './declarations/backend';
-import AddressDisplay from './components/AddressDisplay';
 import BalanceChecker from './components/BalanceChecker';
-import SendTransaction from './components/SendTransaction';
 import UtxoViewer from './components/UtxoViewer';
 import FeePercentiles from './components/FeePercentiles';
+import EcdsaSigning from './components/EcdsaSigning';
+import SchnorrSigning from './components/SchnorrSigning';
+import BlockHeaders from './components/BlockHeaders';
 import nexLogo from '/logo.png';
 import '../index.css';
 
 function App() {
-  const [activeTab, setActiveTab] = useState('addresses');
+  const [activeTab, setActiveTab] = useState('ecdsa');
   const [backendReady, setBackendReady] = useState(false);
 
   useEffect(() => {
@@ -20,9 +21,10 @@ function App() {
   }, []);
 
   const tabs = [
-    { id: 'addresses', label: 'Addresses', icon: '🏠' },
+    { id: 'ecdsa', label: 'ECDSA', icon: '🔐' },
+    { id: 'schnorr', label: 'Schnorr', icon: '✍️' },
+    { id: 'headers', label: 'Block Headers', icon: '📦' },
     { id: 'balance', label: 'Balance', icon: '💰' },
-    { id: 'send', label: 'Send', icon: '📤' },
     { id: 'utxos', label: 'UTXOs', icon: '🔍' },
     { id: 'fees', label: 'Fees', icon: '⚡' },
   ];
@@ -36,7 +38,7 @@ function App() {
               <img src={nexLogo} alt="NexBTC Logo" className="h-12 w-12" />
               <div>
                 <h1 className="text-2xl font-bold text-gray-800">NexBTC</h1>
-                <p className="text-sm text-gray-500">Your Portal to Bitcoin DeFi</p>
+                <p className="text-sm text-gray-500">Bitcoin Signing & Query Service</p>
               </div>
             </div>
             <div className="flex items-center space-x-2">
@@ -76,32 +78,84 @@ function App() {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {activeTab === 'addresses' && <div className="lg:col-span-2"><AddressDisplay backend={backend} /></div>}
+              {activeTab === 'ecdsa' && (
+                <>
+                  <EcdsaSigning backend={backend} />
+                  <div className="bg-white rounded-lg shadow-md p-6">
+                    <h3 className="text-xl font-semibold mb-4 text-gray-800">About ECDSA Signing</h3>
+                    <div className="space-y-3 text-sm text-gray-600">
+                      <p>
+                        Threshold ECDSA signing service using the secp256k1 curve. This is the same
+                        signature algorithm used in Bitcoin and Ethereum.
+                      </p>
+                      <div className="bg-purple-50 border border-purple-200 rounded p-3">
+                        <p className="font-semibold text-purple-900 mb-2">Use Cases:</p>
+                        <ul className="list-disc list-inside text-purple-800 space-y-1">
+                          <li>Bitcoin transaction signing</li>
+                          <li>Ethereum transaction signing</li>
+                          <li>General cryptographic signatures</li>
+                        </ul>
+                      </div>
+                      <div className="bg-blue-50 border border-blue-200 rounded p-3">
+                        <p className="font-semibold text-blue-900 mb-1">Note:</p>
+                        <p className="text-blue-800 text-xs">
+                          The message hash must be exactly 32 bytes. For Bitcoin, this is typically
+                          the double SHA-256 hash of the transaction data.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
+              {activeTab === 'schnorr' && (
+                <>
+                  <SchnorrSigning backend={backend} />
+                  <div className="bg-white rounded-lg shadow-md p-6">
+                    <h3 className="text-xl font-semibold mb-4 text-gray-800">About Schnorr Signing</h3>
+                    <div className="space-y-3 text-sm text-gray-600">
+                      <p>
+                        Threshold Schnorr signing service using BIP340/BIP341. This is used for
+                        Taproot transactions in Bitcoin.
+                      </p>
+                      <div className="bg-purple-50 border border-purple-200 rounded p-3">
+                        <p className="font-semibold text-purple-900 mb-2">Features:</p>
+                        <ul className="list-disc list-inside text-purple-800 space-y-1">
+                          <li>BIP340 (standard Schnorr)</li>
+                          <li>BIP341 (Taproot with Merkle root)</li>
+                          <li>Smaller signatures than ECDSA</li>
+                        </ul>
+                      </div>
+                      <div className="bg-blue-50 border border-blue-200 rounded p-3">
+                        <p className="font-semibold text-blue-900 mb-1">Taproot Mode:</p>
+                        <p className="text-blue-800 text-xs">
+                          Enable BIP-341 mode for Taproot script-path spending. Requires a 32-byte
+                          Merkle root hash of the script tree.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
+              {activeTab === 'headers' && (
+                <>
+                  <div className="lg:col-span-2"><BlockHeaders backend={backend} /></div>
+                </>
+              )}
               {activeTab === 'balance' && (
                 <>
                   <BalanceChecker backend={backend} />
                   <div className="bg-white rounded-lg shadow-md p-6">
                     <h3 className="text-xl font-semibold mb-4 text-gray-800">About Balance Checking</h3>
                     <div className="space-y-3 text-sm text-gray-600">
-                      <p>Check the balance of any Bitcoin address on the network through the Internet Computer's Bitcoin integration.</p>
+                      <p>
+                        Query the balance of any Bitcoin address on the network. This uses the
+                        Internet Computer's native Bitcoin integration.
+                      </p>
                       <div className="bg-blue-50 border border-blue-200 rounded p-3">
-                        <p className="font-semibold text-blue-900 mb-1">Tip:</p>
-                        <p className="text-blue-800">You can check your canister addresses or any Bitcoin address.</p>
-                      </div>
-                    </div>
-                  </div>
-                </>
-              )}
-              {activeTab === 'send' && (
-                <>
-                  <SendTransaction backend={backend} />
-                  <div className="bg-white rounded-lg shadow-md p-6">
-                    <h3 className="text-xl font-semibold mb-4 text-gray-800">About Sending Bitcoin</h3>
-                    <div className="space-y-3 text-sm text-gray-600">
-                      <p>Send Bitcoin from your canister's addresses to any Bitcoin address.</p>
-                      <div className="bg-yellow-50 border border-yellow-200 rounded p-3">
-                        <p className="font-semibold text-yellow-900 mb-1">⚠️ Important:</p>
-                        <p className="text-yellow-800 text-xs">Ensure sufficient balance. Transactions are irreversible.</p>
+                        <p className="font-semibold text-blue-900 mb-1">Supported Networks:</p>
+                        <p className="text-blue-800 text-xs">
+                          Mainnet, Testnet, and Regtest (local development)
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -127,8 +181,10 @@ function App() {
       <footer className="bg-white border-t border-gray-200 mt-12">
         <div className="container mx-auto px-4 py-6">
           <div className="text-center text-sm text-gray-600">
-            <p>Built on the Internet Computer • Bitcoin Integration via IC Bitcoin API</p>
-            <p className="mt-1 text-xs text-gray-500">Powered by threshold ECDSA and Schnorr signatures</p>
+            <p>Bitcoin Signing & Query Service on the Internet Computer</p>
+            <p className="mt-1 text-xs text-gray-500">
+              Threshold ECDSA • Schnorr BIP340/BIP341 • Native Bitcoin Integration
+            </p>
           </div>
         </div>
       </footer>

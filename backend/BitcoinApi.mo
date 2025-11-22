@@ -21,12 +21,24 @@ module {
   let SEND_TRANSACTION_BASE_COST_CYCLES : Cycles = 5_000_000_000;
   let SEND_TRANSACTION_COST_CYCLES_PER_BYTE : Cycles = 20_000_000;
 
+  type GetBlockHeadersRequest = {
+    start_height : Nat32;
+    end_height : ?Nat32;
+    network : Network;
+  };
+
+  type GetBlockHeadersResponse = {
+    tip_height : Nat32;
+    block_headers : [Blob];
+  };
+
   /// Actor definition to handle interactions with the management canister.
   type ManagementCanisterActor = actor {
       bitcoin_get_balance : GetBalanceRequest -> async Satoshi;
       bitcoin_get_utxos : GetUtxosRequest -> async GetUtxosResponse;
       bitcoin_get_current_fee_percentiles : GetCurrentFeePercentilesRequest -> async [MillisatoshiPerVByte];
       bitcoin_send_transaction : SendTransactionRequest -> async ();
+      bitcoin_get_block_headers : GetBlockHeadersRequest -> async GetBlockHeadersResponse;
   };
 
   let management_canister_actor : ManagementCanisterActor = actor("aaaaa-aa");
@@ -81,6 +93,21 @@ module {
     await management_canister_actor.bitcoin_send_transaction({
         network;
         transaction;
+    })
+  };
+
+  let GET_BLOCK_HEADERS_COST_CYCLES : Cycles = 100_000_000;
+
+  /// Returns Bitcoin block headers in the specified range.
+  ///
+  /// Relies on the `bitcoin_get_block_headers` endpoint.
+  /// See https://internetcomputer.org/docs/current/references/ic-interface-spec/#ic-bitcoin_get_block_headers
+  public func get_block_headers(network : Network, start_height : Nat32, end_height : ?Nat32) : async GetBlockHeadersResponse {
+    ExperimentalCycles.add<system>(GET_BLOCK_HEADERS_COST_CYCLES);
+    await management_canister_actor.bitcoin_get_block_headers({
+        network;
+        start_height;
+        end_height;
     })
   };
 }

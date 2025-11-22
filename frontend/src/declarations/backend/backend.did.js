@@ -20,56 +20,45 @@ export const idlFactory = ({ IDL }) => {
     'utxos' : IDL.Vec(utxo),
   });
   const millisatoshi_per_vbyte = IDL.Nat64;
-  const transaction_id = IDL.Text;
+  const get_block_headers_response = IDL.Record({
+    'tip_height' : IDL.Nat32,
+    'block_headers' : IDL.Vec(IDL.Vec(IDL.Nat8)),
+  });
+  const schnorr_aux = IDL.Variant({
+    'bip341' : IDL.Record({ 'merkle_root_hash' : IDL.Vec(IDL.Nat8) }),
+  });
+
   return IDL.Service({
     'get_balance' : IDL.Func([bitcoin_address], [satoshi], []),
+    'get_utxos' : IDL.Func([bitcoin_address], [get_utxos_response], []),
     'get_current_fee_percentiles' : IDL.Func(
         [],
         [IDL.Vec(millisatoshi_per_vbyte)],
         [],
       ),
-    'get_p2pkh_address' : IDL.Func([], [bitcoin_address], []),
-    'get_p2tr_address' : IDL.Func([], [bitcoin_address], []),
-    'get_p2tr_key_only_address' : IDL.Func([], [bitcoin_address], []),
-    'get_utxos' : IDL.Func([bitcoin_address], [get_utxos_response], []),
-    'send_from_p2pkh_address' : IDL.Func(
-        [
-          IDL.Record({
-            'destination_address' : bitcoin_address,
-            'amount_in_satoshi' : satoshi,
-          }),
-        ],
-        [transaction_id],
+    'get_block_headers' : IDL.Func(
+        [IDL.Nat32, IDL.Opt(IDL.Nat32)],
+        [get_block_headers_response],
         [],
       ),
-    'send_from_p2tr_address_key_path' : IDL.Func(
-        [
-          IDL.Record({
-            'destination_address' : bitcoin_address,
-            'amount_in_satoshi' : satoshi,
-          }),
-        ],
-        [transaction_id],
+    'sign_with_ecdsa' : IDL.Func(
+        [IDL.Vec(IDL.Nat8), IDL.Vec(IDL.Vec(IDL.Nat8))],
+        [IDL.Vec(IDL.Nat8)],
         [],
       ),
-    'send_from_p2tr_address_script_path' : IDL.Func(
-        [
-          IDL.Record({
-            'destination_address' : bitcoin_address,
-            'amount_in_satoshi' : satoshi,
-          }),
-        ],
-        [transaction_id],
+    'get_ecdsa_public_key' : IDL.Func(
+        [IDL.Vec(IDL.Vec(IDL.Nat8))],
+        [IDL.Vec(IDL.Nat8)],
         [],
       ),
-    'send_from_p2tr_key_only_address' : IDL.Func(
-        [
-          IDL.Record({
-            'destination_address' : bitcoin_address,
-            'amount_in_satoshi' : satoshi,
-          }),
-        ],
-        [transaction_id],
+    'sign_with_schnorr' : IDL.Func(
+        [IDL.Vec(IDL.Nat8), IDL.Vec(IDL.Vec(IDL.Nat8)), IDL.Opt(schnorr_aux)],
+        [IDL.Vec(IDL.Nat8)],
+        [],
+      ),
+    'get_schnorr_public_key' : IDL.Func(
+        [IDL.Vec(IDL.Vec(IDL.Nat8))],
+        [IDL.Vec(IDL.Nat8)],
         [],
       ),
   });
