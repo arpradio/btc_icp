@@ -3,7 +3,8 @@
     "backend": {
       "main": "backend/app.mo",
       "type": "motoko",
-      "args": "--enhanced-orthogonal-persistence"
+      "args": "--enhanced-orthogonal-persistence",
+      "init_arg": "(variant { testnet })"
     },
     "frontend": {
       "dependencies": ["backend"],
@@ -15,9 +16,22 @@
     }
   },
   "output_env_file": ".env",
-  "defaults": {
+    "defaults": {
+    "bitcoin": {
+      "enabled": true,
+      "nodes": [
+        "127.0.0.1:18444"
+      ],
+      "log_level": "info"
+    },
     "build": {
-      "packtool": "mops sources"
+      "packtool": "mops sources",
+      "args": ""
+    }
+  },
+  "networks": {
+    "local": {
+      "bind": "127.0.0.1:4943"
     }
   }
 }
