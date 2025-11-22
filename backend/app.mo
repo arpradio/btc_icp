@@ -54,7 +54,7 @@ persistent actor class BasicBitcoin(network : Types.Network) {
 
   // Vault: Map user principals to their deposit addresses
   var userAddressesEntries : [(Principal, BitcoinAddress)] = [];
-  transient let userAddresses = HashMap.HashMap<Principal, BitcoinAddress>(0, Principal.equal, Principal.hash);
+  transient var userAddresses = HashMap.HashMap<Principal, BitcoinAddress>(0, Principal.equal, Principal.hash);
 
   system func preupgrade() {
     userAddressesEntries := Iter.toArray(userAddresses.entries());
