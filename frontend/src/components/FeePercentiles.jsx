@@ -11,10 +11,43 @@ export default function FeePercentiles({ backend }) {
     setPercentiles(null);
     try {
       const fees = await backend.get_current_fee_percentiles();
-      setPercentiles(fees.map(f => Number(f)));
+      console.log('Raw fees response:', fees);
+      console.log('Fees type:', typeof fees);
+      console.log('Fees is array:', Array.isArray(fees));
+
+      if (!Array.isArray(fees)) {
+        throw new Error('Expected array response from get_current_fee_percentiles');
+      }
+
+      // Convert BigInt to Number - fees are nat64 (millisatoshi/vbyte)
+      const converted = fees.map((f, idx) => {
+        console.log(`Fee[${idx}]:`, f, 'type:', typeof f);
+
+        // Handle BigInt values
+        if (typeof f === 'bigint') {
+          return Number(f);
+        }
+
+        // Handle regular numbers
+        if (typeof f === 'number') {
+          return f;
+        }
+
+        // Try to convert to number
+        try {
+          return Number(f);
+        } catch (e) {
+          console.error(`Failed to convert fee[${idx}]:`, f, e);
+          return 0;
+        }
+      });
+
+      console.log('Converted fees:', converted);
+      setPercentiles(converted);
     } catch (err) {
       setError(err.message || 'Failed to load fee percentiles');
       console.error('Error loading fee percentiles:', err);
+      console.error('Error stack:', err.stack);
     } finally {
       setLoading(false);
     }
