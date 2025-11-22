@@ -46,16 +46,21 @@ service : (network) -> {
       amount_in_satoshi: satoshi;
     }) -> (transaction_id);
 
-    "get_p2tr_raw_key_spend_address": () -> (bitcoin_address);
+    "get_p2tr_key_only_address": () -> (bitcoin_address);
 
-    "send_from_p2tr_raw_key_spend_address": (record {
+    "send_from_p2tr_key_only_address": (record {
       destination_address: bitcoin_address;
       amount_in_satoshi: satoshi;
     }) -> (transaction_id);
 
-    "get_p2tr_script_spend_address": () -> (bitcoin_address);
+    "get_p2tr_address": () -> (bitcoin_address);
 
-    "send_from_p2tr_script_spend_address": (record {
+    "send_from_p2tr_address_key_path": (record {
+      destination_address: bitcoin_address;
+      amount_in_satoshi: satoshi;
+    }) -> (transaction_id);
+
+    "send_from_p2tr_address_script_path": (record {
       destination_address: bitcoin_address;
       amount_in_satoshi: satoshi;
     }) -> (transaction_id);
