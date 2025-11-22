@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
-import { backend } from './declarations/backend';
+import { AuthClient } from '@dfinity/auth-client';
+import { HttpAgent, Actor } from '@dfinity/agent';
+import { canisterId, createActor } from './declarations/backend';
+import { idlFactory } from './declarations/backend/backend.did.js';
 import VaultDeposit from './components/VaultDeposit';
 import VaultBalance from './components/VaultBalance';
 import VaultWithdraw from './components/VaultWithdraw';
@@ -12,13 +15,95 @@ import '../index.css';
 
 function App() {
   const [activeTab, setActiveTab] = useState('deposit');
-  const [backendReady, setBackendReady] = useState(false);
+  const [authClient, setAuthClient] = useState(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [principal, setPrincipal] = useState(null);
+  const [backend, setBackend] = useState(null);
+  const [publicBackend, setPublicBackend] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (backend) {
-      setBackendReady(true);
-    }
+    initAuth();
+    initPublicBackend();
   }, []);
+
+  async function initPublicBackend() {
+    // Create a public (anonymous) backend actor for public queries
+    const agent = new HttpAgent({
+      host: process.env.DFX_NETWORK === "ic" ? "https://ic0.app" : "http://127.0.0.1:4943"
+    });
+
+    if (process.env.DFX_NETWORK !== "ic") {
+      await agent.fetchRootKey();
+    }
+
+    const publicActor = Actor.createActor(idlFactory, {
+      agent,
+      canisterId,
+    });
+
+    setPublicBackend(publicActor);
+  }
+
+  async function initAuth() {
+    const client = await AuthClient.create();
+    setAuthClient(client);
+
+    if (await client.isAuthenticated()) {
+      handleAuthenticated(client);
+    } else {
+      setLoading(false);
+    }
+  }
+
+  async function handleAuthenticated(client) {
+    const identity = client.getIdentity();
+    const principal = identity.getPrincipal();
+
+    setPrincipal(principal);
+    setIsAuthenticated(true);
+
+    // Create authenticated actor
+    const agent = new HttpAgent({
+      identity,
+      host: process.env.DFX_NETWORK === "ic" ? "https://ic0.app" : "http://127.0.0.1:4943"
+    });
+
+    if (process.env.DFX_NETWORK !== "ic") {
+      await agent.fetchRootKey();
+    }
+
+    const authenticatedBackend = Actor.createActor(idlFactory, {
+      agent,
+      canisterId,
+    });
+
+    setBackend(authenticatedBackend);
+    setLoading(false);
+  }
+
+  async function login() {
+    setLoading(true);
+    const identityProvider = process.env.DFX_NETWORK === "ic"
+      ? "https://identity.ic0.app"
+      : `http://rdmx6-jaaaa-aaaaa-aaadq-cai.localhost:4943`;
+
+    await authClient.login({
+      identityProvider,
+      onSuccess: () => handleAuthenticated(authClient),
+      onError: (err) => {
+        console.error('Login failed:', err);
+        setLoading(false);
+      },
+    });
+  }
+
+  async function logout() {
+    await authClient.logout();
+    setIsAuthenticated(false);
+    setPrincipal(null);
+    setBackend(null);
+  }
 
   const tabs = [
     { id: 'deposit', label: 'Deposit', icon: '💳' },
@@ -40,10 +125,34 @@ function App() {
                 <p className="text-sm text-gray-500">Secure Bitcoin Deposit & Withdrawal</p>
               </div>
             </div>
-            <div className="flex items-center space-x-2">
-              <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm ${backendReady ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                <span className={`w-2 h-2 rounded-full mr-2 ${backendReady ? 'bg-green-500' : 'bg-red-500'}`}></span>
-                {backendReady ? 'Connected' : 'Disconnected'}
+            <div className="flex items-center space-x-3">
+              {isAuthenticated && principal && (
+                <div className="text-right">
+                  <p className="text-xs text-gray-500">Authenticated as</p>
+                  <p className="text-xs font-mono text-gray-700" title={principal.toText()}>
+                    {principal.toText().slice(0, 8)}...{principal.toText().slice(-5)}
+                  </p>
+                </div>
+              )}
+              {isAuthenticated ? (
+                <button
+                  onClick={logout}
+                  className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 transition text-sm"
+                >
+                  Logout
+                </button>
+              ) : (
+                <button
+                  onClick={login}
+                  disabled={loading || !authClient}
+                  className="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700 disabled:bg-gray-400 transition text-sm"
+                >
+                  {loading ? 'Loading...' : 'Login with Internet Identity'}
+                </button>
+              )}
+              <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm ${isAuthenticated ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                <span className={`w-2 h-2 rounded-full mr-2 ${isAuthenticated ? 'bg-green-500' : 'bg-yellow-500'}`}></span>
+                {isAuthenticated ? 'Authenticated' : 'Not Authenticated'}
               </span>
             </div>
           </div>
@@ -51,13 +160,10 @@ function App() {
       </header>
 
       <main className="container mx-auto px-4 py-8">
-        {!backendReady ? (
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 text-center">
-            <p className="text-yellow-800 mb-2">⚠️ Backend canister not connected</p>
-            <p className="text-sm text-yellow-700">
-              Make sure your local replica is running with <code className="bg-yellow-100 px-2 py-1 rounded">dfx start</code>
-              {' '}and deploy the canisters with <code className="bg-yellow-100 px-2 py-1 rounded">dfx deploy</code>
-            </p>
+        {loading ? (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 text-center">
+            <p className="text-blue-800 mb-2">🔄 Initializing...</p>
+            <p className="text-sm text-blue-700">Setting up authentication</p>
           </div>
         ) : (
           <>
@@ -79,8 +185,24 @@ function App() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {activeTab === 'deposit' && (
                 <>
-                  <VaultDeposit backend={backend} />
-                  <div className="bg-white rounded-lg shadow-md p-6">
+                  {!isAuthenticated ? (
+                    <div className="lg:col-span-2 bg-yellow-50 border border-yellow-200 rounded-lg p-6 text-center">
+                      <p className="text-yellow-800 mb-3 text-lg">🔐 Authentication Required</p>
+                      <p className="text-sm text-yellow-700 mb-4">
+                        Please login with Internet Identity to access your vault deposit address.
+                        Your deposit address is uniquely tied to your Internet Computer identity.
+                      </p>
+                      <button
+                        onClick={login}
+                        className="bg-purple-600 text-white px-6 py-2 rounded hover:bg-purple-700 transition"
+                      >
+                        Login with Internet Identity
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <VaultDeposit backend={backend} />
+                      <div className="bg-white rounded-lg shadow-md p-6">
                     <h3 className="text-xl font-semibold mb-4 text-gray-800">How the Vault Works</h3>
                     <div className="space-y-3 text-sm text-gray-600">
                       <p>
@@ -109,16 +231,49 @@ function App() {
                       </div>
                     </div>
                   </div>
+                      </>
+                    )}
                 </>
               )}
               {activeTab === 'vault' && (
                 <>
-                  <div className="lg:col-span-2"><VaultBalance backend={backend} /></div>
+                  {!isAuthenticated ? (
+                    <div className="lg:col-span-2 bg-yellow-50 border border-yellow-200 rounded-lg p-6 text-center">
+                      <p className="text-yellow-800 mb-3 text-lg">🔐 Authentication Required</p>
+                      <p className="text-sm text-yellow-700 mb-4">
+                        Please login with Internet Identity to view your vault balance and transaction history.
+                      </p>
+                      <button
+                        onClick={login}
+                        className="bg-purple-600 text-white px-6 py-2 rounded hover:bg-purple-700 transition"
+                      >
+                        Login with Internet Identity
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="lg:col-span-2"><VaultBalance backend={backend} /></div>
+                  )}
                 </>
               )}
               {activeTab === 'withdraw' && (
                 <>
-                  <VaultWithdraw backend={backend} />
+                  {!isAuthenticated ? (
+                    <div className="lg:col-span-2 bg-yellow-50 border border-yellow-200 rounded-lg p-6 text-center">
+                      <p className="text-yellow-800 mb-3 text-lg">🔐 Authentication Required</p>
+                      <p className="text-sm text-yellow-700 mb-4">
+                        Please login with Internet Identity to withdraw funds from your vault.
+                        Only you can withdraw the Bitcoin you deposited.
+                      </p>
+                      <button
+                        onClick={login}
+                        className="bg-purple-600 text-white px-6 py-2 rounded hover:bg-purple-700 transition"
+                      >
+                        Login with Internet Identity
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <VaultWithdraw backend={backend} />
                   <div className="bg-white rounded-lg shadow-md p-6">
                     <h3 className="text-xl font-semibold mb-4 text-gray-800">Withdrawal Security</h3>
                     <div className="space-y-3 text-sm text-gray-600">
@@ -144,17 +299,19 @@ function App() {
                       </div>
                     </div>
                   </div>
+                    </>
+                  )}
                 </>
               )}
               {activeTab === 'explorer' && (
                 <>
-                  <BalanceChecker backend={backend} />
-                  <UtxoViewer backend={backend} />
+                  <BalanceChecker backend={publicBackend} />
+                  <UtxoViewer backend={publicBackend} />
                 </>
               )}
               {activeTab === 'fees' && (
                 <>
-                  <FeePercentiles backend={backend} />
+                  <FeePercentiles backend={publicBackend} />
                   <div className="bg-white rounded-lg shadow-md p-6">
                     <h3 className="text-xl font-semibold mb-4 text-gray-800">Understanding Network Fees</h3>
                     <div className="space-y-3 text-sm text-gray-600">
